@@ -1,0 +1,10 @@
+---
+title: "Assignment 11: Build a Personalized Recommendation System"
+author: "Kiera Griffiths"
+format: html
+editor: visual
+---
+
+## Approach
+
+For Assignment 11, I will build a personalized recommender system that evolves from the Global Baseline Estimate developed in Assignment 3A. While the previous model relied on calculating a global mean and adjusting for individual user and show biases, this new implementation will utilize User-to-User Collaborative Filtering. By applying this algorithm to the same historical TV drama dataset, the system will identify participants with similar viewing patterns to generate more tailored predictions. The primary goal is to predict the missing rating for "Shogun" for Participant-1 and compare the resulting Root Mean Square Error against the baseline findings to audit the improvement in accuracy. Using the recommenderlab and tidyverse packages, I will start by loading the original dataset from my GitHub repository and transforming the tidy, long-format data into a realRatingMatrix suitable for personalized algorithms. Once the UBCF model is trained using cosine similarity, I will output both specific predicted ratings and ranked top-N lists for users.
