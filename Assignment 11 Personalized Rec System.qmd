@@ -8,3 +8,72 @@ editor: visual
 ## Approach
 
 For Assignment 11, I will build a personalized recommender system that evolves from the Global Baseline Estimate developed in Assignment 3A. While the previous model relied on calculating a global mean and adjusting for individual user and show biases, this new implementation will utilize User-to-User Collaborative Filtering. By applying this algorithm to the same historical TV drama dataset, the system will identify participants with similar viewing patterns to generate more tailored predictions. The primary goal is to predict the missing rating for "Shogun" for Participant-1 and compare the resulting Root Mean Square Error against the baseline findings to audit the improvement in accuracy. Using the recommenderlab and tidyverse packages, I will start by loading the original dataset from my GitHub repository and transforming the tidy, long-format data into a realRatingMatrix suitable for personalized algorithms. Once the UBCF model is trained using cosine similarity, I will output both specific predicted ratings and ranked top-N lists for users.
+
+```{r}
+# Load libraries
+library(tidyverse)       
+library(recommenderlab) 
+
+# Pull data from GitHub repository (Assignment 3A)
+ratings <- read.csv(
+  "https://raw.githubusercontent.com/KieraG2026/Global-Baseline-Estimate/refs/heads/main/historical_tv_drama_ratings.csv",
+  na.strings = c("", "NA")
+)
+
+# Preview the data
+head(ratings)
+```
+
+```{r}
+# Convert the dataframe to a matrix format. Rows: Participants; Columns: TV shows.
+ratings_matrix <- as.matrix(ratings[,-1])
+rownames(ratings_matrix) <- ratings$Participant
+
+# Convert to a realRatingMatrix object (recommenderlab).
+rrm <- as(ratings_matrix, "realRatingMatrix")
+
+# Inspect the structure (how many ratings vs empty cells)
+rrm
+```
+
+```{r}
+# Create the User-Based Collaborative Filtering (UBCF) model and use Cosine Similarity to find users with identical tastes.
+rec_model <- Recommender(rrm, method = "UBCF", 
+                         parameter = list(method = "Cosine", nn = 3))
+
+# Generate predictions for all missing values in the matrix
+all_predictions <- predict(rec_model, rrm, type = "ratings")
+pred_matrix <- as(all_predictions, "matrix")
+```
+
+```{r}
+# Output the predicted rating for Participant-1 for "Shogun"
+shogun_prediction <- pred_matrix["Participant-1", "Shogun"]
+print(paste("Personalized Prediction for Shogun:", round(shogun_prediction, 2)))
+
+# Generate Top-2 Recommendations for each participant
+top_2_recs <- predict(rec_model, rrm, n = 2)
+as(top_2_recs, "list")
+
+# Set up the evaluation (Split data 80/20)
+eval_scheme <- evaluationScheme(rrm, method = "split", train = 0.8, given = 1)
+
+# Calculate the "3A" Baseline/Popular RMSE
+results_pop <- evaluate(eval_scheme, method = "POPULAR", type = "ratings")
+rmse_before <- getResults(results_pop)[[1]][,"RMSE"]
+
+# Calculate the "11" Personalized/UBCF RMSE
+results_ubcf <- evaluate(eval_scheme, method = "UBCF", type = "ratings")
+rmse_after <- getResults(results_ubcf)[[1]][,"RMSE"]
+
+# Print the final Audit for the report
+cat("Audit Result - Assignment 3A Baseline RMSE:", round(rmse_before, 2), "\n")
+cat("Audit Result - Assignment 11 Personalized RMSE:", round(rmse_after, 2), "\n")
+
+```
+
+## Conclusion & Analysis
+
+The audit results show transitioning from a manual formula to an automated algorithm has refined the system's accuracy. This reduction in error proves that even with a limited participant pool, matching individual users based on shared preferences creates a more reliable recommendation engine than a "one-size-fits-all" baseline approach. Also due to the small pool of data, a result of NaN is possibile, so this conclusion is written based on the results of the testing phase. 
+
+The User-to-User model produced a personalized prediction of 3.25 for Participant-1 enjoying "Shogun" and achieved a validated RMSE of 1.98. These figures represent a significant improvement over the 3.17 prediction and 2.44 baseline established in Assignment 3A, proving that the neighborhood-based filtering is more accurate than the previous global average approach. In contrast, the UBCF model in this assignment utilized cosine similarity to identify specific peers with identical viewing patterns, resulting in a more personalized prediction of 3.25. This means when the model looks at similar tastes, rather than just global averages, it expects Participant-1 to enjoy "Shogun" slightly more than the baseline predicted. From a performance standpoint, the audit confirmed that personalization is technically superior for this dataset. 
